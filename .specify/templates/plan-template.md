@@ -31,7 +31,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| # | Principle | Gate Question | Status |
+|---|-----------|---------------|--------|
+| I | API-First Architecture | Does this feature keep all business logic in the Laravel API? Does the Flutter frontend consume only REST endpoints? | ☐ |
+| II | GST Compliance | Does this feature leave all GST-critical schema columns (HSN/SAC, tax rates, CGST/SGST/IGST, place of supply, invoice type, ITC) unchanged and mandatory? | ☐ |
+| III | Config-Driven Customisation | Are any client-specific variations handled via metadata/JSON definition tables rather than code or schema forks? | ☐ |
+| IV | Multi-Tenancy | Does this feature respect tenant database isolation? Is no cross-tenant data access possible? | ☐ |
+| V | Accounting Integrity | If this feature creates financial transactions, does it produce balanced double-entry ledger postings automatically? | ☐ / N/A |
+| VI | Security & Auditability | Are API endpoints protected by role-based access control? Are sensitive changes audit-logged with user and timestamp? | ☐ |
+| VII | Keyboard-First UX | If this feature adds forms or grids, do they support Tab navigation, search-first field selection, and auto-row creation? | ☐ / N/A |
+
+> Any ☐ that cannot be checked MUST be resolved or explicitly justified in the Complexity Tracking table below before implementation begins.
 
 ## Project Structure
 

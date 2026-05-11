@@ -1,0 +1,14 @@
+/node_modules
+/backend/vendor
+/backend/.env
+/backend/storage/*.key
+/backend/public/storage
+/backend/bootstrap/cache/*
+/frontend/.dart_tool/
+/frontend/.packages
+/frontend/build/
+.DS_Store
+.env
+.idea/
+.vscode/
+*.log
