@@ -130,8 +130,20 @@ class _UserFormState extends State<_UserForm> {
   @override
   void initState() {
     super.initState();
+    final allowedRoles = [
+      'super-admin',
+      'admin',
+      'accountant',
+      'staff',
+      'viewer',
+    ];
     if (widget.user != null && widget.user!.roles.isNotEmpty) {
-      _role = widget.user!.roles.first;
+      final userRole = widget.user!.roles.first;
+      if (allowedRoles.contains(userRole)) {
+        _role = userRole;
+      } else {
+        _role = 'staff';
+      }
     }
   }
 
@@ -192,6 +204,7 @@ class _UserFormState extends State<_UserForm> {
                 border: OutlineInputBorder(),
               ),
               items: [
+                'super-admin',
                 'admin',
                 'accountant',
                 'staff',
@@ -239,7 +252,7 @@ class _UserFormState extends State<_UserForm> {
         await repo.update(widget.user!.id, {
           'name': _name.text,
           'email': _email.text,
-          'roles': [_role],
+          'role': _role,
         });
       }
       widget.ref.invalidate(adminUsersProvider);

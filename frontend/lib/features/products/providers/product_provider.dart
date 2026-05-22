@@ -4,33 +4,72 @@ import '../../../core/api_client.dart';
 class ProductSummary {
   final int id;
   final String name;
+  final String? description;
   final String? code;
+  final String? sku;
   final String? hsn;
+  final String? type;
   final String? unit;
-  final double? sellingPrice;
+  final double? salePrice;
+  final double? purchasePrice;
+  final double? mrp;
   final double? currentStock;
   final int gstRate;
+  final int cessRate;
+  final bool trackInventory;
+  final double? openingStock;
+  final bool isActive;
 
   const ProductSummary({
     required this.id,
     required this.name,
+    this.description,
     this.code,
+    this.sku,
     this.hsn,
+    this.type,
     this.unit,
-    this.sellingPrice,
+    this.salePrice,
+    this.purchasePrice,
+    this.mrp,
     this.currentStock,
     this.gstRate = 0,
+    this.cessRate = 0,
+    this.trackInventory = true,
+    this.openingStock,
+    this.isActive = true,
   });
 
   factory ProductSummary.fromJson(Map<String, dynamic> j) => ProductSummary(
     id: j['id'] as int,
     name: j['name'] as String,
+    description: j['description'] as String?,
     code: j['code'] as String?,
+    sku: j['sku'] as String?,
     hsn: j['hsn_sac'] as String?,
+    type: j['type'] as String?,
     unit: j['unit'] as String?,
-    sellingPrice: (j['selling_price'] as num?)?.toDouble(),
-    currentStock: (j['current_stock'] as num?)?.toDouble(),
-    gstRate: (j['gst_rate'] as num?)?.toInt() ?? 0,
+    salePrice: j['sale_price'] != null
+        ? double.tryParse(j['sale_price'].toString())
+        : null,
+    purchasePrice: j['purchase_price'] != null
+        ? double.tryParse(j['purchase_price'].toString())
+        : null,
+    mrp: j['mrp'] != null ? double.tryParse(j['mrp'].toString()) : null,
+    currentStock: j['current_stock'] != null
+        ? double.tryParse(j['current_stock'].toString())
+        : null,
+    gstRate: int.tryParse(j['gst_rate']?.toString() ?? '') ?? 0,
+    cessRate: int.tryParse(j['cess_rate']?.toString() ?? '') ?? 0,
+    trackInventory:
+        j['track_inventory'] == true ||
+        j['track_inventory'] == 1 ||
+        j['track_inventory'] == '1',
+    openingStock: j['opening_stock'] != null
+        ? double.tryParse(j['opening_stock'].toString())
+        : null,
+    isActive:
+        j['is_active'] == true || j['is_active'] == 1 || j['is_active'] == '1',
   );
 }
 

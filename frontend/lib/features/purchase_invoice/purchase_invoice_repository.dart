@@ -110,8 +110,9 @@ class PurchaseInvoiceRepository {
     int id,
     Map<String, dynamic> payload,
   ) async {
-    final response = await _client.dio.put(
-      '/purchase-invoices/$id',
+    payload['_method'] = 'PUT';
+    final response = await _client.dio.post(
+      '/api/v1/purchase-invoices/$id',
       data: payload,
     );
     return response.data['data'] as Map<String, dynamic>;

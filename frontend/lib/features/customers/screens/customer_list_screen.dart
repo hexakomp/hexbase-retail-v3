@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/customer_provider.dart';
-import 'customer_form_screen.dart';
 
 class CustomerListScreen extends ConsumerStatefulWidget {
   const CustomerListScreen({super.key});
@@ -37,10 +37,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
       title: 'Customers',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CustomerFormScreen()),
-          );
+          await context.push('/customers/new');
           notifier.load();
         },
         child: const Icon(Icons.add),
@@ -108,13 +105,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined),
                                 onPressed: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          CustomerFormScreen(customerId: c.id),
-                                    ),
-                                  );
+                                  await context.push('/customers/${c.id}/edit');
                                   notifier.load(page: state.currentPage);
                                 },
                               ),

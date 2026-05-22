@@ -37,15 +37,30 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
   Timer? _debounce;
   bool _loading = false;
 
+  /// Unique group id so that TapRegion recognises the overlay as "inside".
+  late final Object _tapGroupId = UniqueKey();
+
   @override
   void initState() {
     super.initState();
     if (widget.value != null) {
       _controller.text = widget.displayText(widget.value as T);
     }
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) _closeOverlay();
-    });
+    // No focus listener — we rely on TapRegion.onTapOutside to close.
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchableDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Keep the text field in sync when the parent resets or changes the value.
+    if (widget.value != oldWidget.value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _controller.text = widget.value != null
+            ? widget.displayText(widget.value as T)
+            : '';
+      });
+    }
   }
 
   @override
@@ -86,30 +101,45 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
     final offset = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
+    // Capture theme colours before entering the OverlayEntry builder.
+    final colorScheme = Theme.of(context).colorScheme;
+
     _overlay = OverlayEntry(
       builder: (ctx) {
         return Positioned(
           left: offset.dx,
           top: offset.dy + size.height + 4,
           width: size.width,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(4),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 250),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _results.length,
-                itemBuilder: (_, i) {
-                  return ListTile(
-                    dense: true,
-                    selected: i == _selectedIndex,
-                    title: widget.itemBuilder != null
-                        ? widget.itemBuilder!(_results[i])
-                        : Text(widget.displayText(_results[i])),
-                    onTap: () => _select(_results[i]),
-                  );
-                },
+          child: TapRegion(
+            // Same groupId as the text field — taps here are NOT "outside".
+            groupId: _tapGroupId,
+            child: ExcludeFocus(
+              // Prevents Tab / arrow traversal from entering the dropdown.
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(4),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 250),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _results.length,
+                    itemBuilder: (_, i) {
+                      final isSelected = i == _selectedIndex;
+                      return ListTile(
+                        dense: true,
+                        selected: isSelected,
+                        // Visible background highlight for the selected row.
+                        selectedTileColor: colorScheme.primaryContainer,
+                        selectedColor: colorScheme.onPrimaryContainer,
+                        hoverColor: colorScheme.primary.withOpacity(0.08),
+                        title: widget.itemBuilder != null
+                            ? widget.itemBuilder!(_results[i])
+                            : Text(widget.displayText(_results[i])),
+                        onTap: () => _select(_results[i]),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -130,10 +160,17 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
     widget.onSelected(item);
     _closeOverlay();
     _results = [];
+    _selectedIndex = -1;
+    // Defer focus change until after onSelected's state update rebuilds the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
   void _handleKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) return;
+    if (_results.isEmpty) return;
+
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
       setState(
         () =>
@@ -151,33 +188,41 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
       _select(_results[_selectedIndex]);
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
       _closeOverlay();
+    } else if (event.logicalKey == LogicalKeyboardKey.tab) {
+      // Close overlay but let the Tab event propagate normally.
+      _closeOverlay();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: FocusNode(skipTraversal: true),
-      onKeyEvent: _handleKeyEvent,
-      child: TextFormField(
-        controller: _controller,
-        focusNode: _focusNode,
-        enabled: widget.enabled,
-        decoration: InputDecoration(
-          labelText: widget.label,
-          hintText: widget.hint,
-          suffixIcon: _loading
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : const Icon(Icons.search, size: 18),
+    return TapRegion(
+      groupId: _tapGroupId,
+      // Any tap outside both the text field and the overlay closes the list.
+      onTapOutside: (_) => _closeOverlay(),
+      child: KeyboardListener(
+        focusNode: FocusNode(skipTraversal: true),
+        onKeyEvent: _handleKeyEvent,
+        child: TextFormField(
+          controller: _controller,
+          focusNode: _focusNode,
+          enabled: widget.enabled,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            hintText: widget.hint,
+            suffixIcon: _loading
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : const Icon(Icons.search, size: 18),
+          ),
+          onChanged: _search,
         ),
-        onChanged: _search,
       ),
     );
   }

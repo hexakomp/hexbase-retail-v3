@@ -22,11 +22,14 @@ class ChartOfAccountsSeeder extends Seeder
             ['code' => '3001', 'name' => 'CGST Payable',         'type' => 'cgst_payable',  'normal_balance' => 'cr', 'is_system' => true],
             ['code' => '3002', 'name' => 'SGST Payable',         'type' => 'sgst_payable',  'normal_balance' => 'cr', 'is_system' => true],
             ['code' => '3003', 'name' => 'IGST Payable',         'type' => 'igst_payable',  'normal_balance' => 'cr', 'is_system' => true],
+            ['code' => '3004', 'name' => 'TDS Payable',          'type' => 'tds_payable',   'normal_balance' => 'cr', 'is_system' => true],
+            ['code' => '3006', 'name' => 'CESS Payable',         'type' => 'cess_payable',  'normal_balance' => 'cr', 'is_system' => true],
 
             // GST — Input (ITC Receivable)
             ['code' => '3101', 'name' => 'CGST Input Tax Credit', 'type' => 'itc_receivable', 'normal_balance' => 'dr', 'is_system' => true],
             ['code' => '3102', 'name' => 'SGST Input Tax Credit', 'type' => 'itc_receivable', 'normal_balance' => 'dr', 'is_system' => true],
             ['code' => '3103', 'name' => 'IGST Input Tax Credit', 'type' => 'itc_receivable', 'normal_balance' => 'dr', 'is_system' => true],
+            ['code' => '3106', 'name' => 'CESS Input Tax Credit', 'type' => 'itc_receivable', 'normal_balance' => 'dr', 'is_system' => true],
 
             // Revenue
             ['code' => '4001', 'name' => 'Sales Revenue',        'type' => 'sales',         'normal_balance' => 'cr', 'is_system' => true],

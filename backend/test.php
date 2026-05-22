@@ -1,0 +1,1 @@
+<?php require 'vendor/autoload.php'; \ = require_once 'bootstrap/app.php'; \ = \->make(Illuminate\Contracts\Console\Kernel::class); \->bootstrap(); config(['database.connections.tenant.database' => 'hexbase_demo']); print_r(Illuminate\Support\Facades\Schema::connection('tenant')->getColumnListing('company_settings'));

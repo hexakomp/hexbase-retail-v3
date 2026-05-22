@@ -199,7 +199,7 @@ class ReceiptService
                 'narration'    => "Receipt {$receipt->receipt_number}",
             ],
             [
-                'account_code' => 'RECEIVABLE',
+                'account_code' => '2001',
                 'debit'        => 0,
                 'credit'       => $receipt->amount,
                 'narration'    => "Receipt {$receipt->receipt_number}",

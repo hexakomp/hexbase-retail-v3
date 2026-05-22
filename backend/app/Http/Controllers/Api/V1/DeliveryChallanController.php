@@ -149,11 +149,16 @@ class DeliveryChallanController extends Controller
     public function pdf(DeliveryChallan $deliveryChallan): Response
     {
         $deliveryChallan->load(['customer', 'lines.product']);
+
+        // Format the DC number (apply prefix + padding) only for printing
+        $formattedNumber = $this->numbering->format('delivery_challan', $deliveryChallan->dc_number);
+        $deliveryChallan->dc_number = $formattedNumber;
+
         $bytes = $this->pdf->generate('pdf.delivery-challan', ['dc' => $deliveryChallan]);
 
         return response($bytes, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $deliveryChallan->dc_number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="' . $formattedNumber . '.pdf"',
         ]);
     }
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/debit_note_provider.dart';
-import 'debit_note_form_screen.dart';
 
 class DebitNoteListScreen extends ConsumerStatefulWidget {
   const DebitNoteListScreen({super.key});
@@ -41,10 +41,7 @@ class _DebitNoteListScreenState extends ConsumerState<DebitNoteListScreen> {
       title: 'Debit Notes',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const DebitNoteFormScreen()),
-          );
+          await context.push('/debit-notes/new');
           notifier.refresh();
         },
         child: const Icon(Icons.add),
@@ -129,12 +126,7 @@ class _DebitNoteListScreenState extends ConsumerState<DebitNoteListScreen> {
                       ],
                     ),
                     onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DebitNoteFormScreen(noteId: note.id),
-                        ),
-                      );
+                      await context.push('/debit-notes/${note.id}/edit');
                       notifier.refresh();
                     },
                   );

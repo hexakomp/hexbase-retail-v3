@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SalesInvoiceRequest;
 use App\Models\SalesInvoice;
+use App\Services\NumberingSequenceService;
 use App\Services\PdfService;
 use App\Services\SalesInvoiceService;
 use Illuminate\Http\JsonResponse;
@@ -26,8 +27,9 @@ use Illuminate\Http\Request;
 class SalesInvoiceController extends Controller
 {
     public function __construct(
-        protected SalesInvoiceService $service,
-        protected PdfService          $pdfService,
+        protected SalesInvoiceService      $service,
+        protected PdfService               $pdfService,
+        protected NumberingSequenceService $numbering,
     ) {}
 
     // ── Collection ─────────────────────────────────────────────────────────
@@ -173,10 +175,14 @@ class SalesInvoiceController extends Controller
             ->table('company_settings')
             ->first();
 
+        // Format the invoice number (apply prefix + padding) only for printing
+        $formattedNumber = $this->numbering->format('sales_invoice', $invoice->invoice_number);
+        $invoice->invoice_number = $formattedNumber;
+
         return $this->pdfService->download(
             'pdf.sales-invoice',
             compact('invoice', 'companySettings'),
-            'INV-' . $invoice->invoice_number . '.pdf'
+            $formattedNumber . '.pdf'
         );
     }
 }

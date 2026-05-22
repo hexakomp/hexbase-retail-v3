@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\DebitNote;
 use App\Services\DebitNoteService;
+use App\Services\NumberingSequenceService;
 use App\Services\PdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,8 +13,9 @@ use Illuminate\Http\Request;
 class DebitNoteController extends Controller
 {
     public function __construct(
-        protected DebitNoteService $service,
-        protected PdfService       $pdfService,
+        protected DebitNoteService         $service,
+        protected PdfService               $pdfService,
+        protected NumberingSequenceService $numbering,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -124,11 +126,16 @@ class DebitNoteController extends Controller
     public function pdf(DebitNote $debitNote): \Illuminate\Http\Response
     {
         $debitNote->load(['vendor', 'lines.product']);
+
+        // Format the debit note number (apply prefix + padding) only for printing
+        $formattedNumber = $this->numbering->format('debit_note', $debitNote->debit_note_number);
+        $debitNote->debit_note_number = $formattedNumber;
+
         $pdf = $this->pdfService->generate('pdf.debit-note', ['note' => $debitNote]);
 
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $debitNote->debit_note_number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="' . $formattedNumber . '.pdf"',
         ]);
     }
 }

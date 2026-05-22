@@ -110,7 +110,8 @@ class PaymentRepository {
     int id,
     Map<String, dynamic> payload,
   ) async {
-    final response = await _client.dio.put(
+    payload['_method'] = 'PUT';
+    final response = await _client.dio.post(
       '/api/v1/payments/$id',
       data: payload,
     );

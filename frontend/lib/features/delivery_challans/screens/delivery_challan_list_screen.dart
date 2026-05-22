@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/delivery_challan_provider.dart';
-import 'delivery_challan_form_screen.dart';
 
 class DeliveryChallanListScreen extends ConsumerStatefulWidget {
   const DeliveryChallanListScreen({super.key});
@@ -44,12 +44,7 @@ class _DeliveryChallanListScreenState
       title: 'Delivery Challans',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const DeliveryChallanFormScreen(),
-            ),
-          );
+          await context.push('/delivery-challans/new');
           notifier.refresh();
         },
         child: const Icon(Icons.add),
@@ -134,13 +129,7 @@ class _DeliveryChallanListScreenState
                       ],
                     ),
                     onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              DeliveryChallanFormScreen(challanId: dc.id),
-                        ),
-                      );
+                      await context.push('/delivery-challans/${dc.id}/edit');
                       notifier.refresh();
                     },
                   );

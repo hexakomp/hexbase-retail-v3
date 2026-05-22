@@ -6,6 +6,7 @@ use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * SalesInvoiceService — Full business logic for sales invoicing.
@@ -36,20 +37,24 @@ class SalesInvoiceService
             $customer = Customer::findOrFail($data['customer_id']);
             $supplyType = $this->resolveSupplyType($data, $customer);
 
-            $invoiceNumber = $this->numbering->next('sales_invoice');
+            $invoiceNumber = $data['invoice_number'] ?? $this->numbering->next('sales_invoice');
 
             $invoice = SalesInvoice::create([
                 'invoice_number'  => $invoiceNumber,
                 'invoice_date'    => $data['invoice_date'],
                 'due_date'        => $data['due_date'] ?? null,
                 'customer_id'     => $data['customer_id'],
-                'customer_gstin'  => $customer->gstin ?? null,
+                'customer_billing_address' => $data['customer_billing_address'] ?? $customer->billing_address ?? null,
+                'customer_phone'  => $data['customer_phone'] ?? $customer->phone ?? null,
+                'customer_pincode'=> $data['customer_pincode'] ?? $customer->pincode ?? null,
+                'customer_gstin'  => $data['customer_gstin'] ?? $customer->gstin ?? null,
                 'supply_type'     => $supplyType,
                 'invoice_type'    => $data['invoice_type'],
                 'place_of_supply' => $data['place_of_supply'],
                 'payment_terms'   => $data['payment_terms'] ?? null,
                 'narration'       => $data['narration'] ?? null,
                 'notes'           => $data['notes'] ?? null,
+                'internal_notes'  => $data['internal_notes'] ?? null,
                 'terms_conditions' => $data['terms_conditions'] ?? null,
                 'status'          => 'draft',
                 'custom_fields'   => $data['custom_fields'] ?? null,
@@ -93,16 +98,21 @@ class SalesInvoiceService
             $supplyType = $this->resolveSupplyType($data, $customer);
 
             $invoice->update([
+                'invoice_number'  => $data['invoice_number'] ?? $invoice->invoice_number,
                 'invoice_date'    => $data['invoice_date'],
                 'due_date'        => $data['due_date'] ?? null,
                 'customer_id'     => $data['customer_id'],
-                'customer_gstin'  => $customer->gstin ?? null,
+                'customer_billing_address' => $data['customer_billing_address'] ?? $customer->billing_address ?? null,
+                'customer_phone'  => $data['customer_phone'] ?? $customer->phone ?? null,
+                'customer_pincode'=> $data['customer_pincode'] ?? $customer->pincode ?? null,
+                'customer_gstin'  => $data['customer_gstin'] ?? $customer->gstin ?? null,
                 'supply_type'     => $supplyType,
                 'invoice_type'    => $data['invoice_type'],
                 'place_of_supply' => $data['place_of_supply'],
                 'payment_terms'   => $data['payment_terms'] ?? null,
                 'narration'       => $data['narration'] ?? null,
                 'notes'           => $data['notes'] ?? null,
+                'internal_notes'  => $data['internal_notes'] ?? null,
                 'terms_conditions' => $data['terms_conditions'] ?? null,
                 'custom_fields'   => $data['custom_fields'] ?? null,
             ]);
@@ -185,18 +195,34 @@ class SalesInvoiceService
             return $data['supply_type'];
         }
 
-        // Derive from place_of_supply vs company state
-        $companyState = DB::connection('tenant')
-            ->table('company_settings')
-            ->value('state_code') ?? '';
-
-        $pos = $data['place_of_supply'] ?? '';
-
         if ($data['invoice_type'] === 'export') {
             return 'export';
         }
 
-        return strtoupper($companyState) === strtoupper($pos) ? 'intra' : 'inter';
+        // Fetch company settings from DB
+        $company = DB::connection('tenant')->table('company_settings')->first();
+        $companyGstin = $company->gstin ?? '';
+        $companyState = substr(trim($companyGstin), 0, 2);
+
+        // Place of supply from request (usually customer GST state code)
+        $pos = $data['place_of_supply'] ?? '';
+        $customerGstin = $data['customer_gstin'] ?? ($customer ? $customer->gstin : '');
+
+        // If customer GST is null or absent, it should default to intra-state (CGST and SGST)
+        if (empty(trim($customerGstin))) {
+            return 'intra';
+        }
+
+        // If POS is empty, try to get it from customer GSTIN
+        if (empty($pos) && ! empty($customerGstin)) {
+            $pos = substr(trim($customerGstin), 0, 2);
+        }
+
+        if (empty($companyState) || empty($pos)) {
+            return 'intra'; // Default to intra if cannot determine
+        }
+
+        return $companyState === $pos ? 'intra' : 'inter';
     }
 
     private function saveLines(SalesInvoice $invoice, array $linesData, string $supplyType): void
@@ -289,13 +315,13 @@ class SalesInvoiceService
         // Credit: sales (income goes up), then individual tax payable accounts
         $entries = [
             [
-                'account_code' => 'RECEIVABLE',
+                'account_code' => '2001',
                 'debit'        => $invoice->total_amount,
                 'credit'       => 0,
                 'narration'    => "Sales Invoice {$invoice->invoice_number}",
             ],
             [
-                'account_code' => 'SALES',
+                'account_code' => '4001',
                 'debit'        => 0,
                 'credit'       => $invoice->taxable_amount,
                 'narration'    => "Sales Invoice {$invoice->invoice_number}",
@@ -304,7 +330,7 @@ class SalesInvoiceService
 
         if ($invoice->cgst_amount > 0) {
             $entries[] = [
-                'account_code' => 'CGST-PAYABLE',
+                'account_code' => '3001',
                 'debit'        => 0,
                 'credit'       => $invoice->cgst_amount,
                 'narration'    => "CGST on {$invoice->invoice_number}",
@@ -313,7 +339,7 @@ class SalesInvoiceService
 
         if ($invoice->sgst_amount > 0) {
             $entries[] = [
-                'account_code' => 'SGST-PAYABLE',
+                'account_code' => '3002',
                 'debit'        => 0,
                 'credit'       => $invoice->sgst_amount,
                 'narration'    => "SGST on {$invoice->invoice_number}",
@@ -322,10 +348,19 @@ class SalesInvoiceService
 
         if ($invoice->igst_amount > 0) {
             $entries[] = [
-                'account_code' => 'IGST-PAYABLE',
+                'account_code' => '3003',
                 'debit'        => 0,
                 'credit'       => $invoice->igst_amount,
                 'narration'    => "IGST on {$invoice->invoice_number}",
+            ];
+        }
+
+        if ($invoice->cess_amount > 0) {
+            $entries[] = [
+                'account_code' => '3006',
+                'debit'        => 0,
+                'credit'       => $invoice->cess_amount,
+                'narration'    => "CESS on {$invoice->invoice_number}",
             ];
         }
 
@@ -333,14 +368,14 @@ class SalesInvoiceService
             // Absorb round-off into a round-off account
             if ($invoice->round_off > 0) {
                 $entries[] = [
-                    'account_code' => 'ROUND-OFF',
+                    'account_code' => '8001',
                     'debit'        => 0,
                     'credit'       => $invoice->round_off,
                     'narration'    => "Round-off {$invoice->invoice_number}",
                 ];
             } else {
                 $entries[] = [
-                    'account_code' => 'ROUND-OFF',
+                    'account_code' => '8001',
                     'debit'        => abs($invoice->round_off),
                     'credit'       => 0,
                     'narration'    => "Round-off {$invoice->invoice_number}",

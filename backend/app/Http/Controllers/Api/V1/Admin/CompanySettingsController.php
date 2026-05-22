@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CompanySettingsController extends Controller
@@ -16,10 +17,18 @@ class CompanySettingsController extends Controller
         $settings = cache()->remember(
             self::SETTINGS_KEY,
             now()->addHour(),
-            fn() => config('tenancy.company_settings', [])
+            function () {
+                $dbSettings = DB::connection('tenant')->table('company_settings')->first();
+                if ($dbSettings) {
+                    $arr = (array) $dbSettings;
+                    $arr['name'] = $arr['company_name'] ?? ''; // Map company_name DB column to expected API 'name'
+                    return $arr;
+                }
+                return [];
+            }
         );
 
-        return response()->json(['data' => $settings, 'meta' => [], 'message' => 'OK']);
+        return response()->json(['data' => $settings ?: new \stdClass(), 'meta' => [], 'message' => 'OK']);
     }
 
     public function update(Request $request): JsonResponse
@@ -37,18 +46,45 @@ class CompanySettingsController extends Controller
             'email'            => ['nullable', 'email'],
             'phone'            => ['nullable', 'string', 'max:20'],
             'website'          => ['nullable', 'url'],
+            'cin'              => ['nullable', 'string', 'max:50'],
             'bank_name'        => ['nullable', 'string'],
             'bank_account_no'  => ['nullable', 'string'],
             'bank_ifsc'        => ['nullable', 'string'],
+            'bank_branch'      => ['nullable', 'string'],
             'invoice_terms'    => ['nullable', 'string'],
             'invoice_footer'   => ['nullable', 'string'],
         ]);
 
-        // Persist to a JSON file in storage
-        Storage::disk('local')->put(
-            'company/settings.json',
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        );
+        $updateData = [
+            'company_name'     => $data['name'],
+            'legal_name'       => $data['legal_name'] ?? null,
+            'gstin'            => $data['gstin'] ?? null,
+            'pan'              => $data['pan'] ?? null,
+            'cin'              => $data['cin'] ?? null,
+            'address'          => $data['address'] ?? null,
+            'city'             => $data['city'] ?? null,
+            'state'            => $data['state'] ?? null,
+            'state_code'       => $data['state_code'] ?? null,
+            'pincode'          => $data['pincode'] ?? null,
+            'email'            => $data['email'] ?? null,
+            'phone'            => $data['phone'] ?? null,
+            'website'          => $data['website'] ?? null,
+            'bank_name'        => $data['bank_name'] ?? null,
+            'bank_account_no'  => $data['bank_account_no'] ?? null,
+            'bank_ifsc'        => $data['bank_ifsc'] ?? null,
+            'bank_branch'      => $data['bank_branch'] ?? null,
+            'invoice_terms'    => $data['invoice_terms'] ?? null,
+            'invoice_footer'   => $data['invoice_footer'] ?? null,
+            'updated_at'       => now(),
+        ];
+
+        $exists = DB::connection('tenant')->table('company_settings')->first();
+        if ($exists) {
+            DB::connection('tenant')->table('company_settings')->update($updateData);
+        } else {
+            $updateData['created_at'] = now();
+            DB::connection('tenant')->table('company_settings')->insert($updateData);
+        }
 
         cache()->forget(self::SETTINGS_KEY);
 
@@ -62,6 +98,12 @@ class CompanySettingsController extends Controller
         ]);
 
         $path = $request->file('logo')->store('company', 'local');
+        
+        $exists = DB::connection('tenant')->table('company_settings')->first();
+        if ($exists) {
+            DB::connection('tenant')->table('company_settings')->update(['logo_path' => $path]);
+        }
+        cache()->forget(self::SETTINGS_KEY);
 
         return response()->json(['data' => ['logo_path' => $path], 'meta' => [], 'message' => 'Logo uploaded.']);
     }

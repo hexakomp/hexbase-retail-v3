@@ -20,14 +20,20 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   final _name = TextEditingController();
   final _code = TextEditingController();
   final _gstin = TextEditingController();
+  final _pan = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _billingAddress = TextEditingController();
   final _billingCity = TextEditingController();
   final _billingState = TextEditingController();
   final _billingPincode = TextEditingController();
+  final _shippingAddress = TextEditingController();
   final _creditLimit = TextEditingController();
+  final _creditDays = TextEditingController();
+  final _openingBalance = TextEditingController();
   String _gstType = 'regular';
+  String? _openingBalanceType;
+  bool _isActive = true;
 
   bool get _isEdit => widget.customerId != null;
 
@@ -46,15 +52,21 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       _name.text = d['name'] ?? '';
       _code.text = d['code'] ?? '';
       _gstin.text = d['gstin'] ?? '';
+      _pan.text = d['pan'] ?? '';
       _phone.text = d['phone'] ?? '';
       _email.text = d['email'] ?? '';
       _billingAddress.text = d['billing_address'] ?? '';
       _billingCity.text = d['billing_city'] ?? '';
       _billingState.text = d['billing_state'] ?? '';
       _billingPincode.text = d['billing_pincode'] ?? '';
+      _shippingAddress.text = d['shipping_address'] ?? '';
       _creditLimit.text = d['credit_limit']?.toString() ?? '';
+      _creditDays.text = d['credit_days']?.toString() ?? '';
+      _openingBalance.text = d['opening_balance']?.toString() ?? '';
       setState(() {
         _gstType = d['gst_type'] ?? 'regular';
+        _openingBalanceType = d['opening_balance_type'];
+        _isActive = d['is_active'] ?? true;
         _loading = false;
       });
     } catch (e) {
@@ -75,14 +87,22 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         'code': _code.text.trim(),
         'gstin': _gstin.text.trim(),
         'gst_type': _gstType,
+        'pan': _pan.text.trim(),
         'phone': _phone.text.trim(),
         'email': _email.text.trim(),
         'billing_address': _billingAddress.text.trim(),
         'billing_city': _billingCity.text.trim(),
         'billing_state': _billingState.text.trim(),
         'billing_pincode': _billingPincode.text.trim(),
+        'shipping_address': _shippingAddress.text.trim(),
+        'opening_balance_type': _openingBalanceType,
+        'is_active': _isActive,
         if (_creditLimit.text.isNotEmpty)
           'credit_limit': double.tryParse(_creditLimit.text),
+        if (_creditDays.text.isNotEmpty)
+          'credit_days': int.tryParse(_creditDays.text),
+        if (_openingBalance.text.isNotEmpty)
+          'opening_balance': double.tryParse(_openingBalance.text),
       };
 
       if (_isEdit) {
@@ -106,13 +126,17 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       _name,
       _code,
       _gstin,
+      _pan,
       _phone,
       _email,
       _billingAddress,
       _billingCity,
       _billingState,
       _billingPincode,
+      _shippingAddress,
       _creditLimit,
+      _creditDays,
+      _openingBalance,
     ]) {
       c.dispose();
     }
@@ -174,10 +198,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                         value: 'unregistered',
                         child: Text('Unregistered'),
                       ),
-                      DropdownMenuItem(
-                        value: 'consumer',
-                        child: Text('Consumer'),
-                      ),
+                      DropdownMenuItem(value: 'sez', child: Text('SEZ')),
                       DropdownMenuItem(
                         value: 'overseas',
                         child: Text('Overseas'),
@@ -186,10 +207,24 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                     onChanged: (v) => setState(() => _gstType = v!),
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _gstin,
-                    decoration: const InputDecoration(labelText: 'GSTIN'),
-                    textCapitalization: TextCapitalization.characters,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _gstin,
+                          decoration: const InputDecoration(labelText: 'GSTIN'),
+                          textCapitalization: TextCapitalization.characters,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _pan,
+                          decoration: const InputDecoration(labelText: 'PAN'),
+                          textCapitalization: TextCapitalization.characters,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -241,12 +276,87 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  const Text(
+                    'Shipping Address',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
                   TextFormField(
-                    controller: _creditLimit,
-                    decoration: const InputDecoration(
-                      labelText: 'Credit Limit (₹)',
-                    ),
-                    keyboardType: TextInputType.number,
+                    controller: _shippingAddress,
+                    decoration: const InputDecoration(labelText: 'Address'),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Financial Limits',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _creditLimit,
+                          decoration: const InputDecoration(
+                            labelText: 'Credit Limit (₹)',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _creditDays,
+                          decoration: const InputDecoration(
+                            labelText: 'Credit Days',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _openingBalance,
+                          decoration: const InputDecoration(
+                            labelText: 'Opening Balance (₹)',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DropdownButtonFormField<String?>(
+                          value: _openingBalanceType,
+                          decoration: const InputDecoration(
+                            labelText: 'Cr / Dr',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: null, child: Text('None')),
+                            DropdownMenuItem(
+                              value: 'dr',
+                              child: Text('Debit (Dr)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'cr',
+                              child: Text('Credit (Cr)'),
+                            ),
+                          ],
+                          onChanged: (v) =>
+                              setState(() => _openingBalanceType = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: const Text('Active Customer'),
+                    value: _isActive,
+                    onChanged: (v) => setState(() => _isActive = v),
+                    contentPadding: EdgeInsets.zero,
                   ),
                   const SizedBox(height: 24),
                   FilledButton(

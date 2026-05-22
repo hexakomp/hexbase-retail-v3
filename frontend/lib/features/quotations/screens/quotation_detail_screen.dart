@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/quotation_provider.dart';
+import 'quotation_form_screen.dart';
 
 class QuotationDetailScreen extends ConsumerStatefulWidget {
   final int quotationId;

@@ -91,7 +91,9 @@ class AdminUser {
     id: j['id'],
     name: j['name'] ?? '',
     email: j['email'] ?? '',
-    roles: (j['roles'] as List? ?? []).map((r) => r.toString()).toList(),
+    roles: (j['roles'] as List? ?? [])
+        .map((r) => (r is Map) ? (r['name']?.toString() ?? '') : r.toString())
+        .toList(),
     isActive: j['is_active'] == true,
   );
 }
@@ -155,8 +157,9 @@ class NumberingSequenceRepository {
         .toList();
   }
 
-  Future<void> update(int id, Map<String, dynamic> data) async =>
-      await _client.dio.put('/api/v1/admin/numbering-sequences/$id', data: data);
+  Future<void> update(int id, Map<String, dynamic> data) async => await _client
+      .dio
+      .put('/api/v1/admin/numbering-sequences/$id', data: data);
 }
 
 // ─── Activity Log ───────────────────────────────────────────────────────────
@@ -238,7 +241,8 @@ class BackupRepository {
         .toList();
   }
 
-  Future<void> create() async => await _client.dio.post('/api/v1/admin/backups');
+  Future<void> create() async =>
+      await _client.dio.post('/api/v1/admin/backups');
 
   String downloadUrl(String id) => '/admin/backups/$id/download';
 }

@@ -75,11 +75,11 @@ class DebitNoteService
 
             // Double-entry: debit payable (reduction), credit purchase return
             $entries = [
-                ['account_code' => 'PAYABLE',     'debit' => $note->total_amount, 'credit' => 0,               'narration' => "DN {$note->debit_note_number}"],
-                ['account_code' => 'PURCHASE',     'debit' => 0,                  'credit' => $note->subtotal,  'narration' => "DN {$note->debit_note_number}"],
-                ['account_code' => 'CGST_PAYABLE', 'debit' => 0,                  'credit' => $note->cgst_amount,'narration' => "DN {$note->debit_note_number}"],
-                ['account_code' => 'SGST_PAYABLE', 'debit' => 0,                  'credit' => $note->sgst_amount,'narration' => "DN {$note->debit_note_number}"],
-                ['account_code' => 'IGST_PAYABLE', 'debit' => 0,                  'credit' => $note->igst_amount,'narration' => "DN {$note->debit_note_number}"],
+                ['account_code' => '2002',     'debit' => $note->total_amount, 'credit' => 0,               'narration' => "DN {$note->debit_note_number}"],
+                ['account_code' => '5002',     'debit' => 0,                  'credit' => $note->subtotal,  'narration' => "DN {$note->debit_note_number}"],
+                ['account_code' => '3101', 'debit' => 0,                  'credit' => $note->cgst_amount,'narration' => "DN {$note->debit_note_number}"],
+                ['account_code' => '3102', 'debit' => 0,                  'credit' => $note->sgst_amount,'narration' => "DN {$note->debit_note_number}"],
+                ['account_code' => '3103', 'debit' => 0,                  'credit' => $note->igst_amount,'narration' => "DN {$note->debit_note_number}"],
             ];
             $this->accounting->post(
                 array_filter($entries, fn ($e) => ($e['debit'] + $e['credit']) > 0),

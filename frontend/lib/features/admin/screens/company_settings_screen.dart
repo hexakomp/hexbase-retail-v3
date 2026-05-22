@@ -54,7 +54,7 @@ class _CompanySettingsScreenState extends ConsumerState<CompanySettingsScreen> {
       _pan.text = data['pan'] ?? '';
       _cin.text = data['cin'] ?? '';
       _bankName.text = data['bank_name'] ?? '';
-      _bankAccount.text = data['bank_account'] ?? '';
+      _bankAccount.text = data['bank_account_no'] ?? '';
       _bankIfsc.text = data['bank_ifsc'] ?? '';
       _bankBranch.text = data['bank_branch'] ?? '';
     } catch (_) {}
@@ -78,7 +78,7 @@ class _CompanySettingsScreenState extends ConsumerState<CompanySettingsScreen> {
         'pan': _pan.text,
         'cin': _cin.text,
         'bank_name': _bankName.text,
-        'bank_account': _bankAccount.text,
+        'bank_account_no': _bankAccount.text,
         'bank_ifsc': _bankIfsc.text,
         'bank_branch': _bankBranch.text,
       });

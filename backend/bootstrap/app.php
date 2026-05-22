@@ -12,8 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Register TenantResolver as a named middleware alias
-        $middleware->appendToGroup('api', \App\Http\Middleware\TenantResolver::class);
+        // Register TenantResolver first in the api group so it runs before
+        // SubstituteBindings (route-model binding) resolves tenant models.
+        $middleware->prependToGroup('api', \App\Http\Middleware\TenantResolver::class);
 
         // Add Spatie role middleware
         $middleware->alias([

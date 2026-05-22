@@ -10,7 +10,7 @@ class Product extends TenantModel
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'code', 'sku', 'hsn_sac', 'type', 'unit',
+        'name', 'description', 'code', 'sku', 'hsn_sac', 'type', 'unit',
         'sale_price', 'purchase_price', 'mrp',
         'gst_rate', 'cess_rate',
         'track_inventory', 'opening_stock', 'reorder_level',

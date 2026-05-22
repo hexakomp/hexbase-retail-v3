@@ -13,16 +13,24 @@ class SalesInvoiceRequest extends FormRequest
 
     public function rules(): array
     {
+        $id = $this->route('invoice') ? $this->route('invoice')->id : null;
+        
         return [
+            'invoice_number'             => ['nullable', 'string', 'max:50', 'unique:tenant.sales_invoices,invoice_number,' . $id],
             'invoice_date'               => ['required', 'date'],
             'due_date'                   => ['nullable', 'date', 'after_or_equal:invoice_date'],
             'customer_id'                => ['required', 'integer', 'exists:tenant.customers,id'],
+            'customer_billing_address'   => ['nullable', 'string'],
+            'customer_phone'             => ['nullable', 'string', 'max:50'],
+            'customer_pincode'           => ['nullable', 'string', 'max:20'],
+            'customer_gstin'             => ['nullable', 'string', 'max:15'],
             'place_of_supply'            => ['required', 'string', 'max:2'],
             'invoice_type'               => ['required', 'in:b2b,b2c,export'],
             'supply_type'                => ['nullable', 'in:intra,inter,export'],
             'payment_terms'              => ['nullable', 'string', 'max:100'],
             'narration'                  => ['nullable', 'string', 'max:500'],
             'notes'                      => ['nullable', 'string', 'max:1000'],
+            'internal_notes'             => ['nullable', 'string', 'max:1000'],
             'terms_conditions'           => ['nullable', 'string', 'max:2000'],
             'status'                     => ['nullable', 'in:draft,posted'],
             'custom_fields'              => ['nullable', 'array'],
@@ -30,7 +38,7 @@ class SalesInvoiceRequest extends FormRequest
             'lines'                      => ['required', 'array', 'min:1'],
             'lines.*.product_id'         => ['required', 'integer', 'exists:tenant.products,id'],
             'lines.*.description'        => ['nullable', 'string', 'max:500'],
-            'lines.*.hsn_sac'            => ['required', 'string', 'max:10'],
+            'lines.*.hsn_sac'            => ['nullable', 'string', 'max:10'],
             'lines.*.quantity'           => ['required', 'numeric', 'gt:0'],
             'lines.*.unit'               => ['nullable', 'string', 'max:20'],
             'lines.*.rate'               => ['required', 'numeric', 'min:0'],

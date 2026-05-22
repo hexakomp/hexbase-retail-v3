@@ -81,6 +81,7 @@ class ProductController extends Controller
     {
         return [
             'name'            => ['required', 'string', 'max:255'],
+            'description'     => ['nullable', 'string', 'max:1000'],
             'code'            => ['nullable', 'string', 'max:50', Rule::unique('tenant.products', 'code')->ignore($id)->whereNull('deleted_at')],
             'sku'             => ['nullable', 'string', 'max:50', Rule::unique('tenant.products', 'sku')->ignore($id)->whereNull('deleted_at')],
             'hsn_sac'         => ['nullable', 'string', 'max:10'],

@@ -6,6 +6,7 @@ use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceLine;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * PurchaseInvoiceService — Business logic for vendor purchase invoicing.
@@ -178,9 +179,9 @@ class PurchaseInvoiceService
             return $data['supply_type'];
         }
 
-        $companyState = DB::connection('tenant')
-            ->table('company_settings')
-            ->value('state_code') ?? '';
+        $settingsJson = Storage::disk('local')->get('company/settings.json');
+        $settings     = $settingsJson ? (json_decode($settingsJson, true) ?? []) : [];
+        $companyState = $settings['state_code'] ?? '';
 
         $vendorState = '';
         if (! empty($data['vendor_id'])) {

@@ -81,11 +81,11 @@ class CreditNoteService
 
             // Double-entry: debit sales account, credit receivable (reduction)
             $entries = [
-                ['account_code' => 'SALES',      'debit' => $note->subtotal,   'credit' => 0,              'narration' => "CN {$note->credit_note_number}"],
-                ['account_code' => 'CGST_PAYABLE','debit' => $note->cgst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
-                ['account_code' => 'SGST_PAYABLE','debit' => $note->sgst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
-                ['account_code' => 'IGST_PAYABLE','debit' => $note->igst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
-                ['account_code' => 'RECEIVABLE',  'debit' => 0,                 'credit' => $note->total_amount, 'narration' => "CN {$note->credit_note_number}"],
+                ['account_code' => '4002',      'debit' => $note->subtotal,   'credit' => 0,              'narration' => "CN {$note->credit_note_number}"],
+                ['account_code' => '3001','debit' => $note->cgst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
+                ['account_code' => '3002','debit' => $note->sgst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
+                ['account_code' => '3003','debit' => $note->igst_amount,'credit' => 0,             'narration' => "CN {$note->credit_note_number}"],
+                ['account_code' => '2001',  'debit' => 0,                 'credit' => $note->total_amount, 'narration' => "CN {$note->credit_note_number}"],
             ];
             $this->accounting->post(
                 array_filter($entries, fn ($e) => ($e['debit'] + $e['credit']) > 0),

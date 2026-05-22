@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/credit_note_provider.dart';
-import 'credit_note_form_screen.dart';
 
 class CreditNoteListScreen extends ConsumerStatefulWidget {
   const CreditNoteListScreen({super.key});
@@ -41,10 +41,7 @@ class _CreditNoteListScreenState extends ConsumerState<CreditNoteListScreen> {
       title: 'Credit Notes',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreditNoteFormScreen()),
-          );
+          await context.push('/credit-notes/new');
           notifier.refresh();
         },
         child: const Icon(Icons.add),
@@ -129,12 +126,7 @@ class _CreditNoteListScreenState extends ConsumerState<CreditNoteListScreen> {
                       ],
                     ),
                     onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreditNoteFormScreen(noteId: note.id),
-                        ),
-                      );
+                      await context.push('/credit-notes/${note.id}/edit');
                       notifier.refresh();
                     },
                   );

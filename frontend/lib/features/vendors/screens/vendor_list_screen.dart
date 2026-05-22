@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/vendor_provider.dart';
-import 'vendor_form_screen.dart';
 
 class VendorListScreen extends ConsumerStatefulWidget {
   const VendorListScreen({super.key});
@@ -37,10 +37,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       title: 'Vendors',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const VendorFormScreen()),
-          );
+          await context.push('/vendors/new');
           notifier.load();
         },
         child: const Icon(Icons.add),
@@ -100,13 +97,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
                           trailing: IconButton(
                             icon: const Icon(Icons.edit_outlined),
                             onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      VendorFormScreen(vendorId: v.id),
-                                ),
-                              );
+                              await context.push('/vendors/${v.id}/edit');
                               notifier.load(page: state.currentPage);
                             },
                           ),

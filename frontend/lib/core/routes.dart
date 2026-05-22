@@ -13,6 +13,7 @@ import '../features/vendors/screens/vendor_form_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/products/screens/product_form_screen.dart';
 import '../features/products/screens/inventory_movements_screen.dart';
+import '../features/products/screens/stock_summary_screen.dart';
 
 // Sales
 import '../features/sales_invoice/screens/sales_invoice_list_screen.dart';
@@ -139,6 +140,14 @@ GoRouter router(RouterRef ref) {
                 builder: (context, state) {
                   final id = int.parse(state.pathParameters['id']!);
                   return InventoryMovementsScreen(productId: id);
+                },
+              ),
+              GoRoute(
+                path: ':id/stock',
+                builder: (context, state) {
+                  final id = int.parse(state.pathParameters['id']!);
+                  final name = state.uri.queryParameters['name'] ?? '';
+                  return StockSummaryScreen(productId: id, productName: name);
                 },
               ),
             ],

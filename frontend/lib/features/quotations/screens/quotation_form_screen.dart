@@ -36,6 +36,14 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
     if (_isEdit) _loadQuotation();
   }
 
+  @override
+  void dispose() {
+    _validUntil.dispose();
+    _notes.dispose();
+    _termsConditions.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadQuotation() async {
     setState(() => _loading = true);
     try {
@@ -48,8 +56,9 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
       _notes.text = d['notes'] as String? ?? '';
       _termsConditions.text = d['terms_conditions'] as String? ?? '';
 
-      final lines = d['lines'] as List<dynamic>? ?? [];
-      for (final l in lines) {
+      final rawLines = d['lines'] as List<dynamic>? ?? [];
+      _lines.clear();
+      for (final l in rawLines) {
         final line = l as Map<String, dynamic>;
         final product = line['product'] as Map<String, dynamic>?;
         _lines.add(
@@ -57,11 +66,13 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
             productId: line['product_id'] as int?,
             productName: product?['name'] as String? ?? '',
             description: line['description'] as String? ?? '',
-            quantity: (line['quantity'] as num?)?.toDouble() ?? 1,
-            unitPrice: (line['unit_price'] as num?)?.toDouble() ?? 0,
-            gstRate: (line['gst_rate'] as num?)?.toInt() ?? 0,
+            quantity: (line['quantity'] as num?)?.toDouble() ?? 1.0,
+            unitPrice: (line['unit_price'] as num?)?.toDouble() ?? 0.0,
             discountPercent:
-                (line['discount_percent'] as num?)?.toDouble() ?? 0,
+                (line['discount_percent'] as num?)?.toDouble() ?? 0.0,
+            gstRate: (line['gst_rate'] as num?)?.toInt() ?? 0,
+            hsnSac: line['hsn_sac'] as String? ?? '',
+            unit: line['unit'] as String? ?? '',
           ),
         );
       }
@@ -74,19 +85,14 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
     }
   }
 
-  void _addLine() => setState(() => _lines.add(_LineData()));
-  void _removeLine(int i) => setState(() => _lines.removeAt(i));
-
-  double get _grandTotal => _lines.fold(0.0, (sum, l) => sum + l.total);
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCustomer == null) {
-      setState(() => _error = 'Please select a customer');
+      setState(() => _error = 'Please select a customer.');
       return;
     }
     if (_lines.isEmpty) {
-      setState(() => _error = 'Add at least one line item');
+      setState(() => _error = 'Add at least one line item.');
       return;
     }
     setState(() {
@@ -95,18 +101,35 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
     });
     try {
       final repo = ref.read(quotationRepositoryProvider);
-      final data = {
+      final payload = <String, dynamic>{
         'customer_id': _selectedCustomer!['id'],
-        'valid_until': _validUntil.text.trim(),
-        'notes': _notes.text.trim(),
-        'terms_conditions': _termsConditions.text.trim(),
-        'lines': _lines.map((l) => l.toJson()).toList(),
+        'valid_until': _validUntil.text.isEmpty ? null : _validUntil.text,
+        'notes': _notes.text.isEmpty ? null : _notes.text,
+        'terms_conditions': _termsConditions.text.isEmpty
+            ? null
+            : _termsConditions.text,
+        'lines': _lines
+            .map(
+              (l) => {
+                'product_id': l.productId,
+                'description': l.description,
+                'quantity': l.quantity,
+                'unit_price': l.unitPrice,
+                'discount_percent': l.discountPercent,
+                'gst_rate': l.gstRate,
+                'hsn_sac': l.hsnSac,
+                'unit': l.unit,
+              },
+            )
+            .toList(),
       };
+
       if (_isEdit) {
-        await repo.update(widget.quotationId!, data);
+        await repo.update(widget.quotationId!, payload);
       } else {
-        await repo.create(data);
+        await repo.create(payload);
       }
+
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() {
@@ -116,18 +139,53 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _validUntil.dispose();
-    _notes.dispose();
-    _termsConditions.dispose();
-    super.dispose();
+  Future<List<Map<String, dynamic>>> _searchCustomers(String q) async {
+    final repo = ref.read(customerRepositoryProvider);
+    final res = await repo.list(search: q, perPage: 20);
+    final data = res['data'] as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
   }
+
+  Future<List<Map<String, dynamic>>> _searchProducts(String q) async {
+    final repo = ref.read(productRepositoryProvider);
+    final res = await repo.list(search: q, perPage: 20);
+    final data = res['data'] as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  void _addLine() => setState(() => _lines.add(_LineData()));
+
+  void _removeLine(int index) => setState(() => _lines.removeAt(index));
+
+  double get _taxableTotal => _lines.fold(0.0, (s, l) => s + l.taxableAmount);
+
+  double get _gstTotal => _lines.fold(0.0, (s, l) => s + l.gstAmount);
+
+  double get _grandTotal => _taxableTotal + _gstTotal;
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: _isEdit ? 'Edit Quotation' : 'New Quotation',
+      actions: [
+        if (_saving)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else
+          TextButton.icon(
+            onPressed: _save,
+            icon: const Icon(Icons.save_outlined),
+            label: const Text('Save'),
+          ),
+      ],
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Form(
@@ -135,11 +193,12 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Error banner
                   if (_error != null)
                     Card(
                       color: Colors.red.shade50,
                       child: Padding(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12),
                         child: Text(
                           _error!,
                           style: const TextStyle(color: Colors.red),
@@ -147,47 +206,65 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
                       ),
                     ),
 
-                  // Customer picker
+                  // Customer selector
                   SearchableDropdown<Map<String, dynamic>>(
-                    label: 'Customer',
-                    hint: 'Search customer�',
+                    label: 'Customer *',
+                    hint: 'Search customer…',
                     value: _selectedCustomer,
                     displayText: (c) => c['name'] as String? ?? '',
-                    onSearch: (query) async {
-                      final repo = ref.read(customerRepositoryProvider);
-                      final res = await repo.list(search: query, perPage: 10);
-                      return (res['data'] as List<dynamic>)
-                          .map((c) => c as Map<String, dynamic>)
-                          .toList();
-                    },
+                    onSearch: _searchCustomers,
                     onSelected: (c) => setState(() => _selectedCustomer = c),
                   ),
                   const SizedBox(height: 12),
 
+                  // Valid Until
                   TextFormField(
                     controller: _validUntil,
+                    readOnly: true,
                     decoration: const InputDecoration(
-                      labelText: 'Valid Until *',
+                      labelText: 'Valid Until',
+                      hintText: 'YYYY-MM-DD',
+                      border: OutlineInputBorder(),
                       suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    readOnly: true,
                     onTap: () async {
-                      final d = await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
-                        initialDate: DateTime.now().add(
-                          const Duration(days: 30),
-                        ),
+                        initialDate:
+                            DateTime.tryParse(_validUntil.text) ??
+                            DateTime.now().add(const Duration(days: 30)),
                         firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        lastDate: DateTime(2030),
                       );
-                      if (d != null) {
-                        _validUntil.text = d.toIso8601String().split('T').first;
+                      if (picked != null) {
+                        _validUntil.text =
+                            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
                       }
                     },
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Required' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
+                  // Notes
+                  TextFormField(
+                    controller: _notes,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Terms & Conditions
+                  TextFormField(
+                    controller: _termsConditions,
+                    decoration: const InputDecoration(
+                      labelText: 'Terms & Conditions',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
 
                   // Line items header
                   Row(
@@ -198,74 +275,60 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       TextButton.icon(
+                        onPressed: _addLine,
                         icon: const Icon(Icons.add),
                         label: const Text('Add Line'),
-                        onPressed: _addLine,
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
 
-                  for (int i = 0; i < _lines.length; i++)
-                    _LineItemCard(
+                  // Line items
+                  ..._lines.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final line = entry.value;
+                    return _LineItemCard(
                       key: ValueKey(i),
-                      data: _lines[i],
                       index: i,
+                      line: line,
                       onRemove: () => _removeLine(i),
                       onChanged: () => setState(() {}),
-                      productSearch: (q) async {
-                        final repo = ref.read(productRepositoryProvider);
-                        final res = await repo.list(search: q, perPage: 10);
-                        return (res['data'] as List<dynamic>)
-                            .map((p) => p as Map<String, dynamic>)
-                            .toList();
-                      },
+                      searchProducts: _searchProducts,
+                    );
+                  }),
+
+                  const SizedBox(height: 16),
+
+                  // Totals
+                  if (_lines.isNotEmpty)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            _TotalRow(
+                              label: 'Taxable Amount',
+                              value: _taxableTotal,
+                            ),
+                            _TotalRow(label: 'GST', value: _gstTotal),
+                            const Divider(),
+                            _TotalRow(
+                              label: 'Grand Total',
+                              value: _grandTotal,
+                              bold: true,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
 
-                  if (_lines.isNotEmpty) ...[
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Grand Total: ',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          '? ${_grandTotal.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  TextFormField(
-                    controller: _notes,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _termsConditions,
-                    decoration: const InputDecoration(
-                      labelText: 'Terms & Conditions',
-                    ),
-                    maxLines: 3,
-                  ),
                   const SizedBox(height: 24),
-                  FilledButton(
+                  ElevatedButton.icon(
                     onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            _isEdit ? 'Update Quotation' : 'Create Quotation',
-                          ),
+                    icon: const Icon(Icons.save),
+                    label: Text(_isEdit ? 'Update Quotation' : 'Save Draft'),
                   ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -273,7 +336,7 @@ class _QuotationFormScreenState extends ConsumerState<QuotationFormScreen> {
   }
 }
 
-// -- Line Data Model -----------------------------------------------------------
+// ── Line Data ─────────────────────────────────────────────────────────────────
 
 class _LineData {
   int? productId;
@@ -281,84 +344,106 @@ class _LineData {
   String description;
   double quantity;
   double unitPrice;
-  int gstRate;
   double discountPercent;
+  int gstRate;
+  String hsnSac;
+  String unit;
 
   _LineData({
     this.productId,
     this.productName = '',
     this.description = '',
-    this.quantity = 1,
-    this.unitPrice = 0,
-    this.gstRate = 0,
-    this.discountPercent = 0,
+    this.quantity = 1.0,
+    this.unitPrice = 0.0,
+    this.discountPercent = 0.0,
+    this.gstRate = 18,
+    this.hsnSac = '',
+    this.unit = '',
   });
 
-  double get total {
-    final base = quantity * unitPrice * (1 - discountPercent / 100);
-    return base * (1 + gstRate / 100);
-  }
-
-  Map<String, dynamic> toJson() => {
-    'product_id': productId,
-    'description': description,
-    'quantity': quantity,
-    'unit_price': unitPrice,
-    'gst_rate': gstRate,
-    'discount_percent': discountPercent,
-  };
+  double get taxableAmount =>
+      quantity * unitPrice * (1 - discountPercent / 100);
+  double get gstAmount => taxableAmount * gstRate / 100;
+  double get lineTotal => taxableAmount + gstAmount;
 }
 
-// -- Line Item Card ------------------------------------------------------------
+// ── Line Item Card ─────────────────────────────────────────────────────────────
 
-class _LineItemCard extends ConsumerStatefulWidget {
-  final _LineData data;
+class _LineItemCard extends StatefulWidget {
   final int index;
+  final _LineData line;
   final VoidCallback onRemove;
   final VoidCallback onChanged;
-  final Future<List<Map<String, dynamic>>> Function(String query) productSearch;
+  final Future<List<Map<String, dynamic>>> Function(String) searchProducts;
 
   const _LineItemCard({
     super.key,
-    required this.data,
     required this.index,
+    required this.line,
     required this.onRemove,
     required this.onChanged,
-    required this.productSearch,
+    required this.searchProducts,
   });
 
   @override
-  ConsumerState<_LineItemCard> createState() => _LineItemCardState();
+  State<_LineItemCard> createState() => _LineItemCardState();
 }
 
-class _LineItemCardState extends ConsumerState<_LineItemCard> {
-  late TextEditingController _qty;
-  late TextEditingController _price;
-  late TextEditingController _desc;
-  late TextEditingController _disc;
+class _LineItemCardState extends State<_LineItemCard> {
+  late final TextEditingController _qtyCtrl;
+  late final TextEditingController _priceCtrl;
+  late final TextEditingController _discCtrl;
+  late final TextEditingController _gstCtrl;
+  late final TextEditingController _hsnCtrl;
+  late final TextEditingController _unitCtrl;
+  late final TextEditingController _descCtrl;
 
   @override
   void initState() {
     super.initState();
-    _qty = TextEditingController(text: widget.data.quantity.toString());
-    _price = TextEditingController(text: widget.data.unitPrice.toString());
-    _desc = TextEditingController(text: widget.data.description);
-    _disc = TextEditingController(text: widget.data.discountPercent.toString());
+    final l = widget.line;
+    _qtyCtrl = TextEditingController(text: l.quantity.toString());
+    _priceCtrl = TextEditingController(text: l.unitPrice.toString());
+    _discCtrl = TextEditingController(text: l.discountPercent.toString());
+    _gstCtrl = TextEditingController(text: l.gstRate.toString());
+    _hsnCtrl = TextEditingController(text: l.hsnSac);
+    _unitCtrl = TextEditingController(text: l.unit);
+    _descCtrl = TextEditingController(text: l.description);
   }
 
   @override
   void dispose() {
-    _qty.dispose();
-    _price.dispose();
-    _desc.dispose();
-    _disc.dispose();
+    _qtyCtrl.dispose();
+    _priceCtrl.dispose();
+    _discCtrl.dispose();
+    _gstCtrl.dispose();
+    _hsnCtrl.dispose();
+    _unitCtrl.dispose();
+    _descCtrl.dispose();
     super.dispose();
+  }
+
+  void _onProductSelected(Map<String, dynamic>? product) {
+    if (product == null) return;
+    widget.line.productId = product['id'] as int?;
+    widget.line.productName = product['name'] as String? ?? '';
+    widget.line.unitPrice =
+        (product['selling_price'] as num?)?.toDouble() ?? 0.0;
+    widget.line.gstRate = (product['gst_rate'] as num?)?.toInt() ?? 0;
+    widget.line.hsnSac = product['hsn_sac'] as String? ?? '';
+    widget.line.unit = product['unit'] as String? ?? '';
+    _priceCtrl.text = widget.line.unitPrice.toString();
+    _gstCtrl.text = widget.line.gstRate.toString();
+    _hsnCtrl.text = widget.line.hsnSac;
+    _unitCtrl.text = widget.line.unit;
+    widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = widget.line;
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -367,56 +452,33 @@ class _LineItemCardState extends ConsumerState<_LineItemCard> {
             Row(
               children: [
                 Text(
-                  'Item ${widget.index + 1}',
+                  'Line ${widget.index + 1}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                Text(
-                  '? ${widget.data.total.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Remove',
                   onPressed: widget.onRemove,
                 ),
               ],
             ),
             SearchableDropdown<Map<String, dynamic>>(
               label: 'Product',
-              hint: 'Search product�',
-              value: widget.data.productId != null
-                  ? {
-                      'id': widget.data.productId,
-                      'name': widget.data.productName,
-                    }
+              hint: 'Search product…',
+              value: l.productId != null
+                  ? {'id': l.productId, 'name': l.productName}
                   : null,
               displayText: (p) => p['name'] as String? ?? '',
-              onSearch: widget.productSearch,
-              onSelected: (p) {
-                if (p == null) return;
-                setState(() {
-                  widget.data.productId = p['id'] as int?;
-                  widget.data.productName = p['name'] as String? ?? '';
-                  final price =
-                      (p['selling_price'] as num?)?.toDouble() ??
-                      widget.data.unitPrice;
-                  widget.data.unitPrice = price;
-                  widget.data.gstRate =
-                      (p['gst_rate'] as num?)?.toInt() ?? widget.data.gstRate;
-                  _price.text = price.toString();
-                });
-                widget.onChanged();
-              },
+              onSearch: widget.searchProducts,
+              onSelected: _onProductSelected,
             ),
             const SizedBox(height: 8),
             TextFormField(
-              controller: _desc,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                isDense: true,
-              ),
+              controller: _descCtrl,
+              decoration: const InputDecoration(labelText: 'Description'),
               onChanged: (v) {
-                widget.data.description = v;
+                l.description = v;
                 widget.onChanged();
               },
             ),
@@ -425,14 +487,13 @@ class _LineItemCardState extends ConsumerState<_LineItemCard> {
               children: [
                 Expanded(
                   child: TextFormField(
-                    controller: _qty,
-                    decoration: const InputDecoration(
-                      labelText: 'Qty',
-                      isDense: true,
+                    controller: _qtyCtrl,
+                    decoration: const InputDecoration(labelText: 'Qty'),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    keyboardType: TextInputType.number,
                     onChanged: (v) {
-                      widget.data.quantity = double.tryParse(v) ?? 1;
+                      l.quantity = double.tryParse(v) ?? 1.0;
                       widget.onChanged();
                     },
                   ),
@@ -440,33 +501,10 @@ class _LineItemCardState extends ConsumerState<_LineItemCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
-                    controller: _price,
-                    decoration: const InputDecoration(
-                      labelText: 'Price',
-                      isDense: true,
-                    ),
-                    keyboardType: TextInputType.number,
+                    controller: _unitCtrl,
+                    decoration: const InputDecoration(labelText: 'Unit'),
                     onChanged: (v) {
-                      widget.data.unitPrice = double.tryParse(v) ?? 0;
-                      widget.onChanged();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: widget.data.gstRate,
-                    decoration: const InputDecoration(
-                      labelText: 'GST%',
-                      isDense: true,
-                    ),
-                    items: [0, 5, 12, 18, 28]
-                        .map(
-                          (r) => DropdownMenuItem(value: r, child: Text('$r%')),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      setState(() => widget.data.gstRate = v ?? 0);
+                      l.unit = v;
                       widget.onChanged();
                     },
                   ),
@@ -474,22 +512,101 @@ class _LineItemCardState extends ConsumerState<_LineItemCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
-                    controller: _disc,
-                    decoration: const InputDecoration(
-                      labelText: 'Disc%',
-                      isDense: true,
+                    controller: _priceCtrl,
+                    decoration: const InputDecoration(labelText: 'Rate'),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    keyboardType: TextInputType.number,
                     onChanged: (v) {
-                      widget.data.discountPercent = double.tryParse(v) ?? 0;
+                      l.unitPrice = double.tryParse(v) ?? 0.0;
                       widget.onChanged();
                     },
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _discCtrl,
+                    decoration: const InputDecoration(labelText: 'Disc %'),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (v) {
+                      l.discountPercent = double.tryParse(v) ?? 0.0;
+                      widget.onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    controller: _gstCtrl,
+                    decoration: const InputDecoration(labelText: 'GST %'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      l.gstRate = int.tryParse(v) ?? 0;
+                      widget.onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    controller: _hsnCtrl,
+                    decoration: const InputDecoration(labelText: 'HSN/SAC'),
+                    onChanged: (v) {
+                      l.hsnSac = v;
+                      widget.onChanged();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Line Total: ₹${l.lineTotal.toStringAsFixed(2)}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Total Row ─────────────────────────────────────────────────────────────────
+
+class _TotalRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final bool bold;
+
+  const _TotalRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = bold
+        ? const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+        : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text('₹${value.toStringAsFixed(2)}', style: style),
+        ],
       ),
     );
   }

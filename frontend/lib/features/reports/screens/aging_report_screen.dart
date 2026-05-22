@@ -110,77 +110,72 @@ class _AgingTable extends StatelessWidget {
       return const Center(child: Text('No outstanding items.'));
     }
     return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
-              columns: const [
-                DataColumn(label: Text('Name')),
-                DataColumn(label: Text('0-30'), numeric: true),
-                DataColumn(label: Text('31-60'), numeric: true),
-                DataColumn(label: Text('61-90'), numeric: true),
-                DataColumn(label: Text('>90'), numeric: true),
-                DataColumn(label: Text('Total'), numeric: true),
-              ],
-              rows: [
-                ...buckets.map(
-                  (b) => DataRow(
-                    cells: [
-                      DataCell(Text(b.entityName)),
-                      DataCell(Text(_fmt(b.current))),
-                      DataCell(Text(_fmt(b.days3160))),
-                      DataCell(Text(_fmt(b.days6190))),
-                      DataCell(
-                        Text(
-                          _fmt(b.over90),
-                          style: b.over90 > 0
-                              ? const TextStyle(color: Colors.red)
-                              : null,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          _fmt(b.total),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
+      scrollDirection: Axis.horizontal,
+      child: SingleChildScrollView(
+        child: DataTable(
+          headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
+          columns: const [
+            DataColumn(label: Text('Name')),
+            DataColumn(label: Text('0-30'), numeric: true),
+            DataColumn(label: Text('31-60'), numeric: true),
+            DataColumn(label: Text('61-90'), numeric: true),
+            DataColumn(label: Text('>90'), numeric: true),
+            DataColumn(label: Text('Total'), numeric: true),
+          ],
+          rows: [
+            ...buckets.map(
+              (b) => DataRow(
+                cells: [
+                  DataCell(Text(b.entityName)),
+                  DataCell(Text(_fmt(b.current))),
+                  DataCell(Text(_fmt(b.days3160))),
+                  DataCell(Text(_fmt(b.days6190))),
+                  DataCell(
+                    Text(
+                      _fmt(b.over90),
+                      style: b.over90 > 0
+                          ? const TextStyle(color: Colors.red)
+                          : null,
+                    ),
                   ),
+                  DataCell(
+                    Text(
+                      _fmt(b.total),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Totals row
+            DataRow(
+              color: WidgetStateProperty.all(Colors.blue.shade50),
+              cells: [
+                const DataCell(
+                  Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                // Totals row
-                DataRow(
-                  color: WidgetStateProperty.all(Colors.blue.shade50),
-                  cells: [
-                    const DataCell(
-                      Text(
-                        'TOTAL',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataCell(
-                      Text(_fmt(buckets.fold(0.0, (s, b) => s + b.current))),
-                    ),
-                    DataCell(
-                      Text(_fmt(buckets.fold(0.0, (s, b) => s + b.days3160))),
-                    ),
-                    DataCell(
-                      Text(_fmt(buckets.fold(0.0, (s, b) => s + b.days6190))),
-                    ),
-                    DataCell(
-                      Text(_fmt(buckets.fold(0.0, (s, b) => s + b.over90))),
-                    ),
-                    DataCell(
-                      Text(
-                        _fmt(buckets.fold(0.0, (s, b) => s + b.total)),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+                DataCell(
+                  Text(_fmt(buckets.fold(0.0, (s, b) => s + b.current))),
+                ),
+                DataCell(
+                  Text(_fmt(buckets.fold(0.0, (s, b) => s + b.days3160))),
+                ),
+                DataCell(
+                  Text(_fmt(buckets.fold(0.0, (s, b) => s + b.days6190))),
+                ),
+                DataCell(Text(_fmt(buckets.fold(0.0, (s, b) => s + b.over90)))),
+                DataCell(
+                  Text(
+                    _fmt(buckets.fold(0.0, (s, b) => s + b.total)),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
   }
 
   String _fmt(double v) => v.toStringAsFixed(2);

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/expense_provider.dart';
-import 'expense_form_screen.dart';
 
 class ExpenseListScreen extends ConsumerStatefulWidget {
   const ExpenseListScreen({super.key});
@@ -42,10 +42,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
       title: 'Expenses',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ExpenseFormScreen()),
-          );
+          await context.push('/expenses/new');
           notifier.refresh();
         },
         child: const Icon(Icons.add),
@@ -142,13 +139,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                       ],
                     ),
                     onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ExpenseFormScreen(expenseId: expense.id),
-                        ),
-                      );
+                      await context.push('/expenses/${expense.id}/edit');
                       notifier.refresh();
                     },
                   );

@@ -196,7 +196,7 @@ class PaymentService
 
         $entries = [
             [
-                'account_code' => 'PAYABLE',
+                'account_code' => '2002',
                 'debit'        => $payment->amount,
                 'credit'       => 0,
                 'narration'    => "Payment {$payment->payment_number}",
@@ -212,7 +212,7 @@ class PaymentService
         // If TDS deducted, credit TDS-PAYABLE for the retained amount
         if ($payment->tds_amount > 0) {
             $entries[] = [
-                'account_code' => 'TDS-PAYABLE',
+                'account_code' => '3004',
                 'debit'        => 0,
                 'credit'       => $payment->tds_amount,
                 'narration'    => "TDS on payment {$payment->payment_number}",

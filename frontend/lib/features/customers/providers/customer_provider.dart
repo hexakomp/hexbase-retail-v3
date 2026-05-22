@@ -9,8 +9,19 @@ class CustomerSummary {
   final String? code;
   final String? gstin;
   final String? gstType;
+  final String? pan;
   final String? phone;
+  final String? email;
+  final String? billingAddress;
+  final String? billingCity;
   final String? billingState;
+  final String? billingPincode;
+  final String? shippingAddress;
+  final double? creditLimit;
+  final int? creditDays;
+  final double? openingBalance;
+  final String? openingBalanceType;
+  final bool isActive;
 
   const CustomerSummary({
     required this.id,
@@ -18,8 +29,19 @@ class CustomerSummary {
     this.code,
     this.gstin,
     this.gstType,
+    this.pan,
     this.phone,
+    this.email,
+    this.billingAddress,
+    this.billingCity,
     this.billingState,
+    this.billingPincode,
+    this.shippingAddress,
+    this.creditLimit,
+    this.creditDays,
+    this.openingBalance,
+    this.openingBalanceType,
+    this.isActive = true,
   });
 
   factory CustomerSummary.fromJson(Map<String, dynamic> j) => CustomerSummary(
@@ -28,8 +50,26 @@ class CustomerSummary {
     code: j['code'] as String?,
     gstin: j['gstin'] as String?,
     gstType: j['gst_type'] as String?,
+    pan: j['pan'] as String?,
     phone: j['phone'] as String?,
+    email: j['email'] as String?,
+    billingAddress: j['billing_address'] as String?,
+    billingCity: j['billing_city'] as String?,
     billingState: j['billing_state'] as String?,
+    billingPincode: j['billing_pincode'] as String?,
+    shippingAddress: j['shipping_address'] as String?,
+    creditLimit: j['credit_limit'] != null
+        ? double.tryParse(j['credit_limit'].toString())
+        : null,
+    creditDays: j['credit_days'] != null
+        ? int.tryParse(j['credit_days'].toString())
+        : null,
+    openingBalance: j['opening_balance'] != null
+        ? double.tryParse(j['opening_balance'].toString())
+        : null,
+    openingBalanceType: j['opening_balance_type'] as String?,
+    isActive:
+        j['is_active'] == true || j['is_active'] == 1 || j['is_active'] == '1',
   );
 }
 

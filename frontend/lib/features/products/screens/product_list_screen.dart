@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/product_provider.dart';
-import 'product_form_screen.dart';
-import 'stock_summary_screen.dart';
 
 class ProductListScreen extends ConsumerStatefulWidget {
   const ProductListScreen({super.key});
@@ -45,10 +44,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       title: 'Products',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProductFormScreen()),
-          );
+          await context.push('/products/new');
           notifier.load();
         },
         child: const Icon(Icons.add),
@@ -126,23 +122,13 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                               PopupMenuButton<String>(
                                 onSelected: (action) async {
                                   if (action == 'edit') {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            ProductFormScreen(productId: p.id),
-                                      ),
+                                    await context.push(
+                                      '/products/${p.id}/edit',
                                     );
                                     notifier.load(page: state.currentPage);
                                   } else if (action == 'stock') {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => StockSummaryScreen(
-                                          productId: p.id,
-                                          productName: p.name,
-                                        ),
-                                      ),
+                                    await context.push(
+                                      '/products/${p.id}/stock?name=${Uri.encodeComponent(p.name)}',
                                     );
                                   }
                                 },

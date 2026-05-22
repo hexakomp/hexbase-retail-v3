@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $invoice_date
  * @property string|null $due_date
  * @property int    $customer_id
+ * @property string|null $customer_billing_address
+ * @property string|null $customer_phone
+ * @property string|null $customer_pincode
  * @property string|null $customer_gstin
  * @property string $supply_type        intra|inter|export
  * @property string $invoice_type       b2b|b2c|export
@@ -32,6 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $status             draft|confirmed|partially_paid|paid|cancelled
  * @property string|null $narration
  * @property string|null $notes
+ * @property string|null $internal_notes
  * @property string|null $terms_conditions
  * @property string|null $payment_terms
  * @property string|null $pdf_path
@@ -49,6 +53,9 @@ class SalesInvoice extends TenantModel
         'invoice_date',
         'due_date',
         'customer_id',
+        'customer_billing_address',
+        'customer_phone',
+        'customer_pincode',
         'customer_gstin',
         'supply_type',
         'invoice_type',
@@ -67,6 +74,7 @@ class SalesInvoice extends TenantModel
         'status',
         'narration',
         'notes',
+        'internal_notes',
         'terms_conditions',
         'payment_terms',
         'pdf_path',

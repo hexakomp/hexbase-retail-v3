@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/purchase_order_provider.dart';
-import 'purchase_order_form_screen.dart';
 
 class PurchaseOrderListScreen extends ConsumerStatefulWidget {
   const PurchaseOrderListScreen({super.key});
@@ -44,10 +44,7 @@ class _PurchaseOrderListScreenState
       title: 'Purchase Orders',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()),
-          );
+          await context.push('/purchase-orders/new');
           notifier.refresh();
         },
         child: const Icon(Icons.add),
@@ -132,13 +129,7 @@ class _PurchaseOrderListScreenState
                       ],
                     ),
                     onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              PurchaseOrderFormScreen(orderId: po.id),
-                        ),
-                      );
+                      await context.push('/purchase-orders/${po.id}/edit');
                       notifier.refresh();
                     },
                   );

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../providers/quotation_provider.dart';
-import 'quotation_form_screen.dart';
-import 'quotation_detail_screen.dart';
 
 class QuotationListScreen extends ConsumerStatefulWidget {
   const QuotationListScreen({super.key});
@@ -74,10 +73,7 @@ class _QuotationListScreenState extends ConsumerState<QuotationListScreen> {
       title: 'Quotations',
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const QuotationFormScreen()),
-          );
+          await context.push('/quotations/new');
           notifier.load();
         },
         child: const Icon(Icons.add),
@@ -149,13 +145,7 @@ class _QuotationListScreenState extends ConsumerState<QuotationListScreen> {
                             : q.status;
                         return ListTile(
                           onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    QuotationDetailScreen(quotationId: q.id),
-                              ),
-                            );
+                            await context.push('/quotations/${q.id}');
                             notifier.load(page: state.currentPage);
                           },
                           title: Text(q.quotationNo),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\CreditNote;
 use App\Services\CreditNoteService;
+use App\Services\NumberingSequenceService;
 use App\Services\PdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,8 +13,9 @@ use Illuminate\Http\Request;
 class CreditNoteController extends Controller
 {
     public function __construct(
-        protected CreditNoteService $service,
-        protected PdfService        $pdfService,
+        protected CreditNoteService        $service,
+        protected PdfService               $pdfService,
+        protected NumberingSequenceService $numbering,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -125,11 +127,16 @@ class CreditNoteController extends Controller
     public function pdf(CreditNote $creditNote): \Illuminate\Http\Response
     {
         $creditNote->load(['customer', 'lines.product']);
+
+        // Format the credit note number (apply prefix + padding) only for printing
+        $formattedNumber = $this->numbering->format('credit_note', $creditNote->credit_note_number);
+        $creditNote->credit_note_number = $formattedNumber;
+
         $pdf = $this->pdfService->generate('pdf.credit-note', ['note' => $creditNote]);
 
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $creditNote->credit_note_number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="' . $formattedNumber . '.pdf"',
         ]);
     }
 }

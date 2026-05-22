@@ -70,6 +70,14 @@ class SalesInvoiceDetail {
   final String status;
   final String? narration;
   final String? notes;
+  final String? internalNotes;
+  final String? paymentTerms;
+  final String customerBillingAddress;
+  final String customerBillingCity;
+  final String customerBillingState;
+  final String customerBillingPincode;
+  final String customerShippingAddress;
+  final String customerPhone;
   final List<SalesInvoiceLineDetail> lines;
 
   const SalesInvoiceDetail({
@@ -97,6 +105,14 @@ class SalesInvoiceDetail {
     required this.status,
     this.narration,
     this.notes,
+    this.internalNotes,
+    this.paymentTerms,
+    this.customerBillingAddress = '',
+    this.customerBillingCity = '',
+    this.customerBillingState = '',
+    this.customerBillingPincode = '',
+    this.customerShippingAddress = '',
+    this.customerPhone = '',
     required this.lines,
   });
 
@@ -128,6 +144,23 @@ class SalesInvoiceDetail {
       status: json['status'] as String,
       narration: json['narration'] as String?,
       notes: json['notes'] as String?,
+      internalNotes: json['internal_notes'] as String?,
+      paymentTerms: json['payment_terms'] as String?,
+      customerBillingAddress:
+          json['customer_billing_address'] as String? ??
+          customer?['billing_address'] as String? ??
+          '',
+      customerBillingCity: customer?['billing_city'] as String? ?? '',
+      customerBillingState: customer?['billing_state'] as String? ?? '',
+      customerBillingPincode:
+          json['customer_pincode'] as String? ??
+          customer?['billing_pincode'] as String? ??
+          '',
+      customerShippingAddress: customer?['shipping_address'] as String? ?? '',
+      customerPhone:
+          json['customer_phone'] as String? ??
+          customer?['phone'] as String? ??
+          '',
       lines: linesJson
           .map(
             (l) => SalesInvoiceLineDetail.fromJson(l as Map<String, dynamic>),
@@ -266,7 +299,11 @@ class SalesInvoiceRepository {
     int id,
     Map<String, dynamic> payload,
   ) async {
-    final response = await _client.dio.put('/api/v1/invoices/$id', data: payload);
+    payload['_method'] = 'PUT';
+    final response = await _client.dio.post(
+      '/api/v1/invoices/$id',
+      data: payload,
+    );
     return SalesInvoiceDetail.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
     );
